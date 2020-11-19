@@ -6,7 +6,7 @@ library(RColorBrewer)
 library(ResourceSelection)
 
 ##  Import dataset
-all_data <- read.csv("Processed data.csv", header = T, stringsAsFactors = F)
+all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
 all_data$Type <- as.factor(all_data$Type)
 
 regression_data <- all_data[, c(1:10, 14)]
@@ -54,7 +54,7 @@ regression_data <- all_data[, c(1:10, 14)]
 {
   roc_color <- brewer.pal(9,"Set1")
   
-  pdf("Plot/Logistic regression/ROC plot 1.pdf", 6 ,5)
+  pdf("../Plot/Logistic regression/ROC plot 1.pdf", 6 ,5)
   plot(PRDM6_roc, col = roc_color[1])
   plot.roc(CAMK2A_roc, add = TRUE, col = roc_color[2]) 
   plot.roc(RAC2_roc, add = TRUE, col = roc_color[3]) 
@@ -66,7 +66,7 @@ regression_data <- all_data[, c(1:10, 14)]
          lwd = 2)
   dev.off()
   
-  pdf("Plot/Logistic regression/ROC plot 2.pdf", 6 ,5)
+  pdf("../Plot/Logistic regression/ROC plot 2.pdf", 6 ,5)
   plot(TMSB4X_roc, col = roc_color[6])
   plot.roc(MT.RNR2_roc, add = TRUE, col = roc_color[7]) 
   plot.roc(MTND4P12_roc, add = TRUE, col = roc_color[8]) 

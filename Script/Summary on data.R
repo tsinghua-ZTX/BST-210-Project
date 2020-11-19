@@ -5,7 +5,7 @@ library(pheatmap)
 library(psych)
 
 ## Import dataset
-all_data <- read.csv("Processed data.csv", header = T, stringsAsFactors = F)
+all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
 pheatmap(t(log(all_data[,1:10] + 1)),
          scale = "row",
          cluster_cols = F)

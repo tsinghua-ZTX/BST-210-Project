@@ -3,7 +3,7 @@ library(ggplot2)
 library(dplyr)
 
 ## Import dataset
-all_data <- read.csv("Processed data.csv", header = T, stringsAsFactors = F)
+all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
 
 ## Missing data summary
 gene_data <- all_data[,1:10]
@@ -19,7 +19,7 @@ p1 <- ggplot(data = missing_number_df, aes(x = gene, y = count, fill = gene)) +
   theme_bw() + 
   theme(axis.text.x = element_text(size = 7, angle = 45, vjust = 0.7))
 
-pdf("Plot/Missing data/Count of missing data.pdf", 5, 4)
+pdf("../Plot/Missing data/Count of missing data.pdf", 5, 4)
 p1
 dev.off()
 
@@ -41,6 +41,6 @@ p2 <- ggplot(data = missing_type, aes(x = Age, col = Type)) +
   ylab("Density of missing data") + 
   theme_bw()
 
-pdf("Plot/Missing data/Missing on age.pdf", 5, 4)
+pdf("../Plot/Missing data/Missing on age.pdf", 5, 4)
 p2
 dev.off()
