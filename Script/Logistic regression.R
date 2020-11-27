@@ -78,7 +78,7 @@ regression_data <- all_data[, c(1:10, 14)]
   dev.off()
 }
 
-##    H-L GOF test
+##    H-L GOF test (unnecessary)
 {
   hoslem.test(all_data$Type, fitted(PRDM6_mod))
   hoslem.test(all_data$Type, fitted(CAMK2A_mod))
