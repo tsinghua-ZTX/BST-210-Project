@@ -1,15 +1,20 @@
 ##  Import libraries
 library(tidyverse)
+library(caret)
+library(glmnet)
 library(pheatmap)
 library(pROC)
 library(RColorBrewer)
 library(ResourceSelection)
 
 ##  Import dataset
-all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
-all_data$Type <- as.factor(all_data$Type)
-
-regression_data <- all_data[, c(1:10, 14)]
+{
+  all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
+  all_data$Type <- as.factor(all_data$Type)
+  
+  # Data including only genes and types
+  regression_data <- all_data[, c(1:10, 14)]
+}
 
 ##  Rough Regression: single gene model
 ##    Logistic models
@@ -80,16 +85,16 @@ regression_data <- all_data[, c(1:10, 14)]
 
 ##    H-L GOF test (unnecessary)
 {
-  hoslem.test(all_data$Type, fitted(PRDM6_mod))
-  hoslem.test(all_data$Type, fitted(CAMK2A_mod))
-  hoslem.test(all_data$Type, fitted(RAC2_mod))
-  hoslem.test(all_data$Type, fitted(KRAS_mod))
-  hoslem.test(all_data$Type, fitted(DCAKD_mod))
-  hoslem.test(all_data$Type, fitted(TMSB4X_mod))
-  hoslem.test(all_data$Type, fitted(MT.RNR2_mod))
-  hoslem.test(all_data$Type, fitted(MTND4P12_mod))
-  hoslem.test(all_data$Type, fitted(RN7SL2_mod))
-  hoslem.test(all_data$Type, fitted(AL353644.10_mod))
+  # hoslem.test(all_data$Type, fitted(PRDM6_mod))
+  # hoslem.test(all_data$Type, fitted(CAMK2A_mod))
+  # hoslem.test(all_data$Type, fitted(RAC2_mod))
+  # hoslem.test(all_data$Type, fitted(KRAS_mod))
+  # hoslem.test(all_data$Type, fitted(DCAKD_mod))
+  # hoslem.test(all_data$Type, fitted(TMSB4X_mod))
+  # hoslem.test(all_data$Type, fitted(MT.RNR2_mod))
+  # hoslem.test(all_data$Type, fitted(MTND4P12_mod))
+  # hoslem.test(all_data$Type, fitted(RN7SL2_mod))
+  # hoslem.test(all_data$Type, fitted(AL353644.10_mod))
 }
 
 ##    Age related
@@ -101,4 +106,131 @@ regression_data <- all_data[, c(1:10, 14)]
   test_model <- lm(Age ~ RAC2, data = all_data)
   summary(test_model)
 }
+
+
+##  Model Selection: stepwise and LASSO
+{
+  ##    Both stepwise regression (default)
+  {
+    full_model <- glm(Type ~ ., family = binomial(), data = regression_data) 
+    both_step <- step(full_model)
+    summary(both_step)
+    # KRAS and AL353644.10 
+  }
+  
+  ##    Backward stepwise regression
+  {
+    back_step <- step(full_model, direction = "backward")
+    summary(back_step)
+    # KRAS and AL353644.10 
+    # Results similar to "both" method
+  }
+  
+  ##    Special model: without KRAS
+  {
+    KRAS_lack_model <- glm(Type ~ ., family = binomial(), data = regression_data[, -4]) 
+    both_step <- step(KRAS_lack_model)
+    summary(both_step)
+  }
+  
+  ##    LASSO
+  {
+    set.seed(1234)
+    x <- as.matrix(regression_data[,1:10])
+    y <- regression_data[,11]
+    fit <- glmnet(x, y, alpha = 1, family = 'binomial')
+    fit_cv <- cv.glmnet(x, y, alpha = 1, family = 'binomial', type.measure = 'class')
+    plot(fit_cv)
+    pdf("../Plot/Logistic regression/LASSO_Lambda_CV.pdf", 6, 5)
+    plot(fit_cv)
+    dev.off()
+    coef(fit_cv)
+  }
+  ##  PRDM6, DCAKD, TMSB4X are chosen
+}
+
+
+##  Model 1: KRAS and AL353644.10
+{
+  model_1 <- glm(Type ~ KRAS + AL353644.10, family = binomial(), data = regression_data) 
+  summary(model_1)
+  model_1_roc <- roc(regression_data$Type, 
+                     predict(model_1),
+                     levels = c("Normal", "Cancer"))
+  # AUROC is 1: too good to be true
+  # Why?
+  # Shown in point plot
+  KA_plot <- regression_data %>%
+    ggplot(aes(x = KRAS, y = AL353644.10, col = Type)) +
+    geom_point() + 
+    labs(x = "KRAS (TPM)", y = "AL353644.10 (TPM)") + 
+    scale_color_brewer(type = "div", palette = "Set1") + 
+    theme_bw()
+  pdf("../Plot/Logistic regression/KA_plot.pdf", 6, 5)
+  KA_plot
+  dev.off()
+  
+  ##    Strangely, in cancer groups, there's a linear relation between KRAS and AL353644.10, but not in 
+  ##  the normal group; 
+  
+  # Analysis only on cancer group
+  KA_cancer <- lm(KRAS ~ AL353644.10, data = regression_data[which(regression_data$Type == "Cancer"), ])
+  summary(KA_cancer)
+  # \beta = 0.031548, with p-value <2e-16; a strong linear relationship.
+  
+  KA_normal <- lm(KRAS ~ AL353644.10, data = regression_data[which(regression_data$Type == "Normal"), ])
+  summary(KA_normal)
+  # \beta = -5.773e-05, with p-value = 0.75; no linear significance.
+}
+
+# Since the too-good performance, maybe we should consider oher genes
+##  Model 2: PRDM6 and RAC2, similar as model 1
+{
+  model_2 <- glm(Type ~ PRDM6 + RAC2, family = binomial(), data = regression_data) 
+  summary(model_2)
+  model_2_roc <- roc(regression_data$Type, 
+                     predict(model_2),
+                     levels = c("Normal", "Cancer"))
+  PR_plot <- regression_data %>%
+    ggplot(aes(x = PRDM6, y = RAC2, col = Type)) +
+    geom_point() + 
+    labs(x = "PRDM6 (TPM)", y = "RAC2 (TPM)") + 
+    scale_color_brewer(type = "div", palette = "Set1") + 
+    theme_bw()
+  pdf("../Plot/Logistic regression/PR_plot.pdf", 6, 5)
+  PR_plot
+  dev.off()  
+}
+
+##  Model 3: PRDM6, DCAKD and TMSB4X
+{
+  model_3_roc <- roc(regression_data$Type, 
+                     as.vector(predict(fit_cv, newx = x)),
+                     levels = c("Normal", "Cancer"))
+  PDT_ROC <- plot(model_3_roc, 
+                  col = roc_color[1],
+                  print.auc = T,
+                  print.auc.x = 0.2,
+                  print.auc.y = 0.05)
+  pdf("../Plot/Logistic regression/PDT_ROC.pdf", 5, 5)
+  plot(model_3_roc, 
+       col = roc_color[1],
+       print.auc = T,
+       print.auc.x = 0.25,
+       print.auc.y = 0.05)
+  dev.off()    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
