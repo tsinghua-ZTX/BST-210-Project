@@ -2,6 +2,7 @@
 library(tidyverse)
 library(caret)
 library(glmnet)
+library(lars)
 library(pheatmap)
 library(pROC)
 library(RColorBrewer)
@@ -138,15 +139,31 @@ library(ResourceSelection)
     set.seed(1234)
     x <- as.matrix(regression_data[,1:10])
     y <- regression_data[,11]
-    fit <- glmnet(x, y, alpha = 1, family = 'binomial')
-    fit_cv <- cv.glmnet(x, y, alpha = 1, family = 'binomial', type.measure = 'class')
-    plot(fit_cv)
-    pdf("../Plot/Logistic regression/LASSO_Lambda_CV.pdf", 6, 5)
-    plot(fit_cv)
-    dev.off()
-    coef(fit_cv)
+    
+    lar1 <- lars(x, as.matrix(as.numeric(y)))
+    lar1
+    plot(lar1) 
+    summary(lar1)
+    lar1$beta[10, ]
+    coef <- coef.lars(lar1, mode="step", s=10) 
+    predict(lar1, x, s = 10)$fit
+    
+    lasso_pred <- data.frame(LASSO = predict(lar1, x, s = 10)$fit, Type = all_data$Type)
+    ggplot(data = lasso_pred, aes(y = LASSO, x = Type, col = Type)) + 
+      geom_boxplot() + 
+      theme_bw()
+    
+    # fit <- glmnet(x, y, alpha = 1, family = 'binomial')
+    # fit_cv <- cv.glmnet(x, y, alpha = 1, family = 'binomial', type.measure = 'class')
+    # plot(fit_cv)
+    # pdf("../Plot/Logistic regression/LASSO_Lambda_CV.pdf", 6, 5)
+    # plot(fit_cv)
+    # dev.off()
+    # coef(fit_cv)
+    ##  PRDM6, DCAKD, TMSB4X are chosen
   }
-  ##  PRDM6, DCAKD, TMSB4X are chosen
+  
+  
 }
 
 
@@ -157,7 +174,7 @@ library(ResourceSelection)
   model_1_roc <- roc(regression_data$Type, 
                      predict(model_1),
                      levels = c("Normal", "Cancer"))
-  # AUROC is 1: too good to be true
+  # AUROC is 1: too good to be true; also, there seems to be a HUGE collinearity in model 1
   # Why?
   # Shown in point plot
   KA_plot <- regression_data %>%
@@ -183,7 +200,7 @@ library(ResourceSelection)
   # \beta = -5.773e-05, with p-value = 0.75; no linear significance.
 }
 
-# Since the too-good performance, maybe we should consider oher genes
+# Since the too-good performance, maybe we should consider other genes
 ##  Model 2: PRDM6 and RAC2, similar as model 1
 {
   model_2 <- glm(Type ~ PRDM6 + RAC2, family = binomial(), data = regression_data) 
@@ -202,7 +219,7 @@ library(ResourceSelection)
   dev.off()  
 }
 
-##  Model 3: PRDM6, DCAKD and TMSB4X
+##  Model 3 (LASSO): PRDM6, DCAKD and TMSB4X
 {
   model_3_roc <- roc(regression_data$Type, 
                      as.vector(predict(fit_cv, newx = x)),
@@ -222,12 +239,21 @@ library(ResourceSelection)
 }
 
 
+#   In general, all models could have a very good performance in estimating the binary outcome 
+# by logistic regression; 
+
+##  Model 4: 1 + age
+{
+  model_4 <- glm(Type ~ KRAS + AL353644.10 + Age, family = binomial(), data = all_data) 
+  summary(model_4)
+}
 
 
+##  test
 
-
-
-
+ggplot(data = all_data) + 
+  geom_point(aes(x = DCAKD, y = CAMK2A, col = Type)) + 
+  theme_bw()
 
 
 

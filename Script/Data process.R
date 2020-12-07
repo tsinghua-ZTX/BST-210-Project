@@ -79,6 +79,7 @@ p1 <- ggplot(data = volvano_df,
   labs(x = "log2(fold change)", y = "-log10 (p-value)", title = "Volcano Plot of Differential Genes") + 
   theme_bw()
 p1
+
 pdf("../Plot/Data process/Volcano plot.pdf", 6, 5)
 p1
 dev.off()
