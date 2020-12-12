@@ -11,7 +11,7 @@ library(ResourceSelection)
 ##  Import dataset
 {
   all_data <- read.csv("../Processed data.csv", header = T, stringsAsFactors = F)
-  all_data$Type <- as.factor(all_data$Type)
+  all_data$Type <- factor(all_data$Type, levels = c("Normal", "Cancer"))
   
   # Data including only genes and types
   regression_data <- all_data[, c(1:10, 14)]
@@ -79,7 +79,7 @@ library(ResourceSelection)
   plot.roc(RN7SL2_roc, add = TRUE, col = roc_color[9]) 
   plot.roc(DCAKD_roc, add = TRUE, col = roc_color[1]) 
   legend("bottomright",
-         legend = names(regression_data)[c(6:9, 1)],
+         legend = names(regression_data)[c(6:10)],
          col = roc_color[c(6:9, 1)], lwd = 2)
   dev.off()
 }
@@ -222,7 +222,7 @@ library(ResourceSelection)
 ##  Model 3 (LASSO): PRDM6, DCAKD and TMSB4X
 {
   model_3_roc <- roc(regression_data$Type, 
-                     as.vector(predict(fit_cv, newx = x)),
+                     as.vector(predict(lar1, x, s = 10)$fit),
                      levels = c("Normal", "Cancer"))
   PDT_ROC <- plot(model_3_roc, 
                   col = roc_color[1],
